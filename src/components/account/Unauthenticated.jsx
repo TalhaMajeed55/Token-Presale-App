@@ -5,9 +5,15 @@ import WalletIcon from '../ui/icons/Wallet';
 
 const Unauthenticated = () => {
   const [walletProvidersDialogOpen, setWalletProvidersDialogOpen] = useState(false);
+  const [walletProvidersResetNonce, setWalletProvidersResetNonce] = useState(0);
+
+  const handleWalletConnectClick = () => {
+    if (!walletProvidersDialogOpen) setWalletProvidersDialogOpen(true);
+    setWalletProvidersResetNonce((n) => n + 1);
+  };
 
   const handleWalletProvidersDialogToggle = () => {
-    setWalletProvidersDialogOpen(!walletProvidersDialogOpen);
+    setWalletProvidersDialogOpen(false);
   };
 
   return (
@@ -16,7 +22,7 @@ const Unauthenticated = () => {
         variant="contained"
         disableElevation
         fullWidth
-        onClick={handleWalletProvidersDialogToggle}
+        onClick={handleWalletConnectClick}
         startIcon={<WalletIcon />}
         sx={{ boxShadow: 'rgb(0 0 0 / 8%) 0px 8px 28px' }}
       >
@@ -25,6 +31,7 @@ const Unauthenticated = () => {
       <WalletProviders
         walletProvidersDialogOpen={walletProvidersDialogOpen}
         handleWalletProvidersDialogToggle={handleWalletProvidersDialogToggle}
+        resetNonce={walletProvidersResetNonce}
       />
     </Fragment>
   );

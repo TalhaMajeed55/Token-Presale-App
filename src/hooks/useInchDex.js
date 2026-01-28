@@ -8,7 +8,7 @@ const useInchDex = (chain) => {
   const [tokenList, setTokenlist] = useState();
 
   useEffect(() => {
-    if (!Moralis?.['Plugins']?.['oneInch']) return null;
+    if (!Moralis?.['Plugins']?.['oneInch']) return;
     Moralis.Plugins.oneInch
       .getSupportedTokens({ chain })
       .then((tokens) => setTokenlist(tokens.tokens));

@@ -165,7 +165,7 @@ const MintCard = () => {
       functionName: 'getTokenPrice',
       ...options,
     });
-    const atokenPrice = ethers.utils.formatUnits(tokenPrice, 18);
+    const atokenPrice = ethers.formatUnits(tokenPrice, 18);
     setPresalePrice(atokenPrice);
     const maxsupply = await Moralis.executeFunction({ functionName: 'maxSupply', ...options });
     const presaleactive = await Moralis.executeFunction({

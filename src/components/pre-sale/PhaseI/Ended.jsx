@@ -57,21 +57,25 @@ const Ended = () => {
       return;
     }
 
-    if (!library.provider) {
-      Init();
-      return;
-    }
+    (async () => {
+      try {
+        const network = await library.getNetwork();
+        const chainId = Number(network.chainId);
 
-    if (parseInt(library.provider.chainId) === netChainId[0]) {
-      chainindex = 0;
-      getInfo();
-    } else if (parseInt(library.provider.chainId) === netChainId[1]) {
-      chainindex = 1;
-      getInfo();
-    } else {
-      setOpenAlert(true);
-      setAlertMsg('Selected chain is unrecognized');
-    }
+        if (chainId === netChainId[0]) {
+          chainindex = 0;
+          await getInfo(chainId);
+        } else if (chainId === netChainId[1]) {
+          chainindex = 1;
+          await getInfo(chainId);
+        } else {
+          setOpenAlert(true);
+          setAlertMsg('Selected chain is unrecognized');
+        }
+      } catch {
+        Init();
+      }
+    })();
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [account, library]);
@@ -86,7 +90,7 @@ const Ended = () => {
     return new ethers.Contract(address, abi, signerOrProvider);
   };
 
-  const getInfo = async () => {
+  const getInfo = async (chainId) => {
     let presalecontract;
 
     if (!account) {
@@ -99,12 +103,7 @@ const Ended = () => {
 
     presalecontract = getContract(PRESALE_ABI, PresaleContractAddress[chainindex], signer);
 
-    let chainSuffix = '';
-    if (parseInt(library.provider.chainId) === netChainId[0]) {
-      chainSuffix = 'ETH';
-    } else {
-      chainSuffix = 'BNB';
-    }
+    const chainSuffix = chainId === netChainId[0] ? 'ETH' : 'BNB';
 
     let tokeninfoarr;
     try {
@@ -127,12 +126,12 @@ const Ended = () => {
     setStatus([
       {
         id: 'Raised Amount',
-        val: ethers.utils.formatUnits(status.raised_amount, 18).toString() + ' ' + chainSuffix,
+        val: ethers.formatUnits(status.raised_amount, 18).toString() + ' ' + chainSuffix,
       },
       {
         id: 'Sold Amount',
         val:
-          ethers.utils.formatUnits(status.sold_amount, tokeninfoarr.decimal).toString() +
+          ethers.formatUnits(status.sold_amount, tokeninfoarr.decimal).toString() +
           ' ' +
           tokeninfoarr.symbol,
       },
@@ -143,11 +142,11 @@ const Ended = () => {
       setBuyerInfo([
         {
           id: 'Invested',
-          val: ethers.utils.formatUnits(buyerInfo.base, 18).toString() + ' ' + chainSuffix,
+          val: ethers.formatUnits(buyerInfo.base, 18).toString() + ' ' + chainSuffix,
         },
         {
           id: 'ELO Amount',
-          val: ethers.utils.formatUnits(buyerInfo.sale, 18).toString() + ' ' + tokeninfoarr.symbol,
+          val: ethers.formatUnits(buyerInfo.sale, 18).toString() + ' ' + tokeninfoarr.symbol,
         },
       ]);
     } catch (error) {

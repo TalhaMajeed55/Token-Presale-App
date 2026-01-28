@@ -7,7 +7,7 @@ function Ramper() {
   const [ramper, setRamper] = useState();
   const { Moralis } = useMoralis();
   useEffect(() => {
-    if (!Moralis?.['Plugins']?.['fiat']) return null;
+    if (!Moralis?.['Plugins']?.['fiat']) return;
     async function initPlugin() {
       Moralis.Plugins.fiat.buy({}, { disableTriggers: true }).then((data) => setRamper(data.data));
     }

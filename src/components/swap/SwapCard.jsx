@@ -64,7 +64,7 @@ const SwapCard = () => {
   const [openAlert, setOpenAlert] = useState(false);
 
   useEffect(() => {
-    if (!isInitialized || !fromToken || !chain) return null;
+    if (!isInitialized || !fromToken || !chain) return;
     console.log(fromToken);
     fetchTokenPrice({ chain: chain, address: fromToken[['address']] })
       .then((price) =>
@@ -81,7 +81,7 @@ const SwapCard = () => {
   }, [chain, isInitialized, fromToken]);
 
   useEffect(() => {
-    if (!isInitialized || !toToken || !chain) return null;
+    if (!isInitialized || !toToken || !chain) return;
     fetchTokenPrice({ chain: chain, address: toToken[['address']] }).then((price) =>
       setTokenPricesUSD({
         ...tokenPricesUSD,
@@ -92,7 +92,7 @@ const SwapCard = () => {
   }, [chain, isInitialized, toToken]);
 
   useEffect(() => {
-    if (!tokenList) return null;
+    if (!tokenList) return;
     setFromToken(tokenList[nativeAddress]);
   }, [tokenList]);
 

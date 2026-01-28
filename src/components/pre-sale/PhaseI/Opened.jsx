@@ -54,6 +54,7 @@ const Opened = () => {
   const [buyerInfo, setBuyerInfo] = useState([]);
   const [status, setStatus] = useState([]);
   const [presaleState, setPresaleState] = useState('');
+  const [currentChainId, setCurrentChainId] = useState(null);
   const [alertMsg, setAlertMsg] = useState('');
   const [openAlert, setOpenAlert] = useState(false);
 
@@ -65,22 +66,26 @@ const Opened = () => {
       return;
     }
 
-    if (!library.provider) {
-      Init();
-      return;
-    }
+    (async () => {
+      try {
+        const network = await library.getNetwork();
+        const chainId = Number(network.chainId);
+        setCurrentChainId(chainId);
 
-    //console.log(parseInt(library.provider.chainId), "net chain id");
-    if (parseInt(library.provider.chainId) === netChainId[0]) {
-      chainindex = 0;
-      getInfo();
-    } else if (parseInt(library.provider.chainId) === netChainId[1]) {
-      chainindex = 1;
-      getInfo();
-    } else {
-      setOpenAlert(true);
-      setAlertMsg('Selected chain is unrecognized');
-    }
+        if (chainId === netChainId[0]) {
+          chainindex = 0;
+          await getInfo(chainId);
+        } else if (chainId === netChainId[1]) {
+          chainindex = 1;
+          await getInfo(chainId);
+        } else {
+          setOpenAlert(true);
+          setAlertMsg('Selected chain is unrecognized');
+        }
+      } catch {
+        Init();
+      }
+    })();
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [account, library]);
@@ -99,7 +104,7 @@ const Opened = () => {
     return new ethers.Contract(address, abi, signerOrProvider);
   };
 
-  const getInfo = async () => {
+  const getInfo = async (chainId) => {
     let presalecontract;
 
     if (!account) {
@@ -112,12 +117,7 @@ const Opened = () => {
 
     presalecontract = getContract(PRESALE_ABI, PresaleContractAddress[chainindex], signer);
 
-    let chainSuffix = '';
-    if (parseInt(library.provider.chainId) === netChainId[0]) {
-      chainSuffix = 'ETH';
-    } else {
-      chainSuffix = 'BNB';
-    }
+    const chainSuffix = chainId === netChainId[0] ? 'ETH' : 'BNB';
 
     let tokenrate;
     try {
@@ -146,19 +146,19 @@ const Opened = () => {
       { id: 'Token Rate:', val: 1 / tokenrate + ' BNB' },
       {
         id: 'Softcap:',
-        val: ethers.utils.formatUnits(presaleinfo.softcap, 18).toString() + ' ' + chainSuffix,
+        val: ethers.formatUnits(presaleinfo.softcap, 18).toString() + ' ' + chainSuffix,
       },
       {
         id: 'Hardcap:',
-        val: ethers.utils.formatUnits(presaleinfo.hardcap, 18).toString() + ' ' + chainSuffix,
+        val: ethers.formatUnits(presaleinfo.hardcap, 18).toString() + ' ' + chainSuffix,
       },
       {
         id: 'Buy min:',
-        val: ethers.utils.formatUnits(presaleinfo.raise_min, 18).toString() + ' ' + chainSuffix,
+        val: ethers.formatUnits(presaleinfo.raise_min, 18).toString() + ' ' + chainSuffix,
       },
       {
         id: 'Buy max:',
-        val: ethers.utils.formatUnits(presaleinfo.raise_max, 18).toString() + ' ' + chainSuffix,
+        val: ethers.formatUnits(presaleinfo.raise_max, 18).toString() + ' ' + chainSuffix,
       },
       { id: 'Soft Presale Start:', val: soft_starttime },
       { id: 'Soft Presale End:', val: soft_endtime },
@@ -176,7 +176,7 @@ const Opened = () => {
     }
 
     let sale_supply =
-      (ethers.utils.formatUnits(tokeninfoarr.totalsupply, tokeninfoarr.decimal) / 100) * 10;
+      (ethers.formatUnits(tokeninfoarr.totalsupply, tokeninfoarr.decimal) / 100) * 10;
     setTokenInfo([
       { id: 'Token Name:', val: tokeninfoarr.name },
       { id: 'Token Symbol:', val: tokeninfoarr.symbol },
@@ -197,12 +197,12 @@ const Opened = () => {
     setStatus([
       {
         id: 'Raised Amount',
-        val: ethers.utils.formatUnits(status.raised_amount, 18).toString() + ' ' + chainSuffix,
+        val: ethers.formatUnits(status.raised_amount, 18).toString() + ' ' + chainSuffix,
       },
       {
         id: 'Sold Amount',
         val:
-          ethers.utils.formatUnits(status.sold_amount, tokeninfoarr.decimal).toString() +
+          ethers.formatUnits(status.sold_amount, tokeninfoarr.decimal).toString() +
           ' ' +
           tokeninfoarr.symbol,
       },
@@ -213,11 +213,11 @@ const Opened = () => {
       setBuyerInfo([
         {
           id: 'Invested',
-          val: ethers.utils.formatUnits(buyerInfo.base, 18).toString() + ' ' + chainSuffix,
+          val: ethers.formatUnits(buyerInfo.base, 18).toString() + ' ' + chainSuffix,
         },
         {
           id: 'ELO Amount',
-          val: ethers.utils.formatUnits(buyerInfo.sale, 18).toString() + ' ' + tokeninfoarr.symbol,
+          val: ethers.formatUnits(buyerInfo.sale, 18).toString() + ' ' + tokeninfoarr.symbol,
         },
       ]);
     } catch (error) {
@@ -272,9 +272,10 @@ const Opened = () => {
 
     const signer = await library.getSigner();
     presalecontract = getContract(PRESALE_ABI, PresaleContractAddress[chainindex], signer);
+    const chainId = Number((await library.getNetwork()).chainId);
     if (
-      parseInt(library.provider.chainId) !== netChainId[0] &&
-      parseInt(library.provider.chainId) !== netChainId[1]
+      chainId !== netChainId[0] &&
+      chainId !== netChainId[1]
     ) {
       setOpenAlert(true);
       setAlertMsg('Selected chain is unrecognized');
@@ -288,7 +289,7 @@ const Opened = () => {
     }
 
     let overrid = {
-      value: ethers.utils.parseUnits(amount.toString(), 18),
+      value: ethers.parseUnits(amount.toString(), 18),
     };
 
     try {
@@ -316,9 +317,10 @@ const Opened = () => {
 
     const signer = await library.getSigner();
     presalecontract = getContract(PRESALE_ABI, PresaleContractAddress[chainindex], signer);
+    const chainId = Number((await library.getNetwork()).chainId);
     if (
-      parseInt(library.provider.chainId) !== netChainId[0] &&
-      parseInt(library.provider.chainId) !== netChainId[1]
+      chainId !== netChainId[0] &&
+      chainId !== netChainId[1]
     ) {
       setOpenAlert(true);
       setAlertMsg('Selected chain is unrecognized');
@@ -350,9 +352,10 @@ const Opened = () => {
 
     const signer = await library.getSigner();
     presalecontract = getContract(PRESALE_ABI, PresaleContractAddress[chainindex], signer);
+    const chainId = Number((await library.getNetwork()).chainId);
     if (
-      parseInt(library.provider.chainId) !== netChainId[0] &&
-      parseInt(library.provider.chainId) !== netChainId[1]
+      chainId !== netChainId[0] &&
+      chainId !== netChainId[1]
     ) {
       setOpenAlert(true);
       setAlertMsg('Selected chain is unrecognized');
@@ -440,7 +443,7 @@ const Opened = () => {
 
   const handleSelectedChain = () => {
     try {
-      switch (parseInt(library.provider.chainId)) {
+      switch (currentChainId) {
         case netChainId[1]:
           return '$BNB';
         case netChainId[0]:

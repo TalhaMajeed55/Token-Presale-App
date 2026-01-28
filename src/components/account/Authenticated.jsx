@@ -11,19 +11,20 @@ const Authenticated = ({ library, account }) => {
 
   const getBalance = async () => {
     const bal = await library.getBalance(account);
-    setBalance(ethers.utils.formatUnits(bal, 18).toString());
+    setBalance(ethers.formatUnits(bal, 18).toString());
   };
 
-  const getChain = () => {
-    setChainId(library.provider.chainId);
+  const getChain = async () => {
+    const network = await library.getNetwork();
+    setChainId(Number(network.chainId));
   };
 
   useEffect(() => {
-    getBalance();
-
-    if (library.provider) {
-      getChain();
-    }
+    if (!library || !account) return;
+    (async () => {
+      await getBalance();
+      await getChain();
+    })();
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [library, account]);

@@ -11,7 +11,7 @@ const useTokenPrice = (options) => {
   const [tokenPrice, setTokenPrice] = useState();
 
   useEffect(() => {
-    if (!options || !isInitialized) return null;
+    if (!options || !isInitialized) return;
     fetchTokenPrice(options).then((price) => {
       price.usdPrice = c2.format(price.usdPrice);
       const { value, decimals, symbol } = price.nativePrice;

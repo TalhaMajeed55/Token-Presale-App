@@ -61,7 +61,7 @@ export default function Networks() {
   };
 
   useEffect(() => {
-    if (!chainId) return null;
+    if (!chainId) return;
     const newSelected = menuItems.find((item) => item.key === chainId);
     setSelected(newSelected);
   }, [chainId]);

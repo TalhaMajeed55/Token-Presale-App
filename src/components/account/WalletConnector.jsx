@@ -17,6 +17,20 @@ let netid = 0;
 let provider = null;
 let walletconnect, injected, bsc;
 
+const ensureConnectorOff = (connector) => {
+  if (!connector) return connector;
+  if (typeof connector.off === 'function') return connector;
+  if (typeof connector.removeListener === 'function') {
+    // web3-react core expects connectors to support `.off(...)` (EventEmitter in Node does),
+    // but some browser EventEmitter polyfills only implement `removeListener`.
+    connector.off = function (event, listener) {
+      this.removeListener(event, listener);
+      return this;
+    };
+  }
+  return connector;
+};
+
 //mainnet
 // const netlist = [
 //   {
@@ -84,10 +98,7 @@ function web3ProviderFrom(endpoint, config) {
 
 export function getDefaultProvider() {
   if (!provider) {
-    provider = new ethers.providers.Web3Provider(
-      web3ProviderFrom(netlist[netid].rpcurl),
-      netlist[netid].chaind
-    );
+    provider = new ethers.JsonRpcProvider(netlist[netid].rpcurl, netlist[netid].chaind);
   }
 
   return provider;
@@ -96,15 +107,22 @@ export function getDefaultProvider() {
 export function setNet(id) {
   netid = id;
 
-  walletconnect = new WalletConnectConnector({
-    rpc: { [netlist[netid].chaind]: netlist[netid].rpcurl },
-    qrcode: true,
-    pollingInterval: 12000,
-  });
+  walletconnect = ensureConnectorOff(
+    new WalletConnectConnector({
+      rpc: { [netlist[netid].chaind]: netlist[netid].rpcurl },
+      qrcode: true,
+      pollingInterval: 12000,
+    })
+  );
 
-  injected = new InjectedConnector({
-    supportedChainIds: [netlist[netid].chaind],
-  });
+  injected = ensureConnectorOff(
+    new InjectedConnector({
+      supportedChainIds: [netlist[netid].chaind],
+    })
+  );
+
+  // legacy / unused, but keep consistent if ever configured
+  bsc = ensureConnectorOff(bsc);
 }
 
 export function useWalletConnector() {
@@ -126,6 +144,45 @@ export function useWalletConnector() {
         setProvider(provider);
         return true;
       } catch (error) {
+        const errorCode =
+          error?.code ?? error?.data?.originalError?.code ?? error?.data?.code ?? error?.error?.code;
+
+        // Unrecognized chain ID, try adding it first.
+        // MetaMask uses 4902 for "unknown chain".
+        if (errorCode === 4902) {
+          try {
+            await provider.request({
+              method: 'wallet_addEthereumChain',
+              params: [
+                {
+                  chainId: `0x${netlist[netid].chaind.toString(16)}`,
+                  chainName: netlist[netid].chainname,
+                  rpcUrls: [netlist[netid].rpcurl],
+                  nativeCurrency: {
+                    name: netlist[netid].chainsymbol,
+                    symbol: netlist[netid].chainsymbol,
+                    decimals: netlist[netid].chaindecimals,
+                  },
+                  blockExplorerUrls: [netlist[netid].blockurl],
+                },
+              ],
+            });
+
+            await provider.request({
+              method: 'wallet_switchEthereumChain',
+              params: [
+                {
+                  chainId: `0x${netlist[netid].chaind.toString(16)}`,
+                },
+              ],
+            });
+
+            setProvider(provider);
+            return true;
+          } catch (addError) {
+            return false;
+          }
+        }
         return false;
       }
     } else {
@@ -136,50 +193,63 @@ export function useWalletConnector() {
     }
   };
 
+  const loginWallet = async (connector) => {
+    if (!connector) {
+      throw new Error('Unable to find connector! The connector config is wrong');
+    }
+
+    // Ensure compatibility with web3-react core's expectation of `.off(...)`.
+    const safeConnector = ensureConnectorOff(connector);
+
+    try {
+      await activate(safeConnector, undefined, true);
+      setProvider(safeConnector);
+      return true;
+    } catch (error) {
+      if (error instanceof UnsupportedChainIdError) {
+        const hasSetup = await setupNetwork();
+        if (hasSetup) {
+          await activate(safeConnector, undefined, true);
+          setProvider(safeConnector);
+          return true;
+        }
+        throw error;
+      }
+
+      if (error instanceof NoEthereumProviderError) {
+        throw new Error('No injected wallet found. Please install MetaMask.');
+      }
+      if (
+        error instanceof UserRejectedRequestErrorInjected ||
+        error instanceof UserRejectedRequestErrorWalletConnect
+      ) {
+        throw new Error('Connection request rejected.');
+      }
+
+      throw error;
+    }
+  };
+
   const loginMetamask = async () => {
-    loginWallet(injected);
+    return loginWallet(injected);
   };
 
   const loginWalletConnect = async () => {
-    loginWallet(walletconnect);
+    return loginWallet(walletconnect);
   };
 
   const loginBSC = async () => {
-    loginWallet(bsc);
-  };
-
-  const loginWallet = (connector) => {
-    if (connector) {
-      activate(connector, async (error) => {
-        if (error instanceof UnsupportedChainIdError) {
-          const hasSetup = await setupNetwork();
-          if (hasSetup) {
-            activate(connector);
-          }
-        } else {
-          if (error instanceof NoEthereumProviderError) {
-            console.log('Network Provide Error');
-          } else if (
-            error instanceof UserRejectedRequestErrorInjected ||
-            error instanceof UserRejectedRequestErrorWalletConnect
-          ) {
-            console.log('Authorization Error! Please authorize to access your account');
-          } else {
-            console.log(error.name + error.message);
-          }
-        }
-      });
-    } else {
-      console.log('Unable to find connector! The connector config is wrong');
-    }
-    setProvider(connector);
+    return loginWallet(bsc);
   };
 
   const logoutWalletConnector = () => {
-    deactivate(provider, async (error) => {
+    // v6 signature: `deactivate()` (no args). Passing args can mask real issues.
+    try {
+      deactivate();
+    } catch (error) {
       console.log(error);
       return false;
-    });
+    }
     return true;
   };
 
@@ -190,3 +260,21 @@ export function useWalletConnector() {
     logoutWalletConnector,
   };
 }
+
+// ---- legacy below (kept for reference) ----
+
+/*
+export function setNet(id) {
+  netid = id;
+
+  walletconnect = new WalletConnectConnector({
+    rpc: { [netlist[netid].chaind]: netlist[netid].rpcurl },
+    qrcode: true,
+    pollingInterval: 12000,
+  });
+
+  injected = new InjectedConnector({
+    supportedChainIds: [netlist[netid].chaind],
+  });
+}
+*/

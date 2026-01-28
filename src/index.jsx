@@ -42,8 +42,11 @@ const theme = createTheme({
 const POLLING_INTERVAL = 12000;
 
 const getLibrary = (provider) => {
-  const library = new ethers.providers.Web3Provider(provider);
-  library.pollingInterval = POLLING_INTERVAL;
+  const library = new ethers.BrowserProvider(provider);
+  // Best-effort: BrowserProvider doesn't expose pollingInterval like v5 providers.
+  try {
+    library.pollingInterval = POLLING_INTERVAL;
+  } catch {}
   return library;
 };
 
