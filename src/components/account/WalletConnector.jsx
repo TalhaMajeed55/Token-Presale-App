@@ -28,45 +28,13 @@ const ensureConnectorOff = (connector) => {
   return connector;
 };
 
-//mainnet
-// const netlist = [
-//   {
-//     chaind : 1,
-//     rpcurl : "https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161",
-//     blockurl : "https://etherscan.io",
-//     chainname : "Ethereum Mainnet",
-//     chainnetname : "Ethereum Mainnet",
-//     chainsymbol : "ETH",
-//     chaindecimals : 18
-//   },
-//   {
-//     chaind : 56,
-//     rpcurl : "https://bsc-dataseed1.ninicoin.io",
-//     blockurl : "https://bscscan.com/",
-//     chainname : "Binance Smart Chain Mainnet",
-//     chainnetname : "Binance Smart Chain Mainnet",
-//     chainsymbol : "BNB",
-//     chaindecimals : 18
-//   },
-// ]
-
-//testnet
 const netlist = [
   {
-    chaind: 3,
-    rpcurl: "https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161",
-    blockurl: "https://ropsten.etherscan.io",
-    chainname: "Ethereum Mainnet",
-    chainnetname: "Ethereum Mainnet",
-    chainsymbol: "ETH",
-    chaindecimals: 18,
-  },
-  {
-    chaind: 97,
-    rpcurl: "https://data-seed-prebsc-1-s1.binance.org:8545",
-    blockurl: "https://testnet.bscscan.com/",
-    chainname: "BSC testnet",
-    chainnetname: "BSC testnet",
+    chaind: 56,
+    rpcurl: "https://bsc-dataseed.binance.org",
+    blockurl: "https://bscscan.com/",
+    chainname: "Binance Smart Chain",
+    chainnetname: "Binance Smart Chain",
     chainsymbol: "BNB",
     chaindecimals: 18,
   },
