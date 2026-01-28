@@ -36,7 +36,7 @@ const SmallAvatar = styled(Avatar)(({ theme }) => ({
 }));
 
 const networks = [
-  { label: "Binance", value: "bsc", icon: <BinanceLogo width={60} /> },
+  { label: "Binance", value: "bnb", icon: <BinanceLogo width={60} /> },
 ];
 
 const wallets = [
@@ -52,12 +52,7 @@ const setWalletProvider = (wallet) => {
   localStorage.setItem("wallet", wallet);
 };
 
-const supportedWalletProviders = new Set([
-  "injected_eth",
-  "walletconnect_eth",
-  "injected_bsc",
-  "walletconnect_bsc",
-]);
+const supportedWalletProviders = new Set(["injected_bnb", "walletconnect_bnb"]);
 
 const formatAddress = (address) => {
   if (!address) return "";
@@ -74,8 +69,7 @@ const getConnectedWalletLabel = (walletprovider) => {
 
 const getConnectedNetworkLabel = (walletprovider) => {
   if (!walletprovider) return "";
-  if (walletprovider.endsWith("_bsc")) return "BSC";
-  if (walletprovider.endsWith("_eth")) return "Ethereum";
+  if (walletprovider.endsWith("_bnb")) return "BNB Chain";
   return "";
 };
 
@@ -188,20 +182,12 @@ const NetworkWalletProviders = ({
 
   const connectWallet = async (walletprovider) => {
     switch (walletprovider) {
-      case "injected_eth":
-        setWalletProvider("injected_eth");
+      case "injected_bnb":
+        setWalletProvider("injected_bnb");
         setNet(0);
         return loginMetamask();
-      case "walletconnect_eth":
-        setWalletProvider("walletconnect_eth");
-        setNet(0);
-        return loginWalletConnect();
-      case "injected_bsc":
-        setWalletProvider("injected_bsc");
-        setNet(0);
-        return loginMetamask();
-      case "walletconnect_bsc":
-        setWalletProvider("walletconnect_bsc");
+      case "walletconnect_bnb":
+        setWalletProvider("walletconnect_bnb");
         setNet(0);
         return loginWalletConnect();
       default:
@@ -210,6 +196,7 @@ const NetworkWalletProviders = ({
   };
 
   const startConnect = async (walletprovider) => {
+    console.log("Starting connection with", walletprovider);
     if (!supportedWalletProviders.has(walletprovider)) {
       localStorage.removeItem("connected");
       localStorage.removeItem("wallet");

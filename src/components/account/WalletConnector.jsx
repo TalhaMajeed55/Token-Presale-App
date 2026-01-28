@@ -12,7 +12,7 @@ import Web3 from "web3";
 //0 ropsten, 1 bsc
 let netid = 0;
 let provider = null;
-let walletconnect, injected, bsc;
+let walletconnect, injected;
 
 const ensureConnectorOff = (connector) => {
   if (!connector) return connector;
@@ -91,9 +91,6 @@ export function setNet(id) {
       supportedChainIds: [netlist[netid].chaind],
     }),
   );
-
-  // legacy / unused, but keep consistent if ever configured
-  bsc = ensureConnectorOff(bsc);
 }
 
 export function useWalletConnector() {
@@ -126,7 +123,7 @@ export function useWalletConnector() {
         if (errorCode === 4902) {
           try {
             await provider.request({
-              method: "wallet_addEthereumChain",
+              method: "wallet_addChain",
               params: [
                 {
                   chainId: `0x${netlist[netid].chaind.toString(16)}`,
@@ -220,10 +217,6 @@ export function useWalletConnector() {
     return loginWallet(walletconnect);
   };
 
-  const loginBSC = async () => {
-    return loginWallet(bsc);
-  };
-
   const logoutWalletConnector = () => {
     // v6 signature: `deactivate()` (no args). Passing args can mask real issues.
     try {
@@ -238,7 +231,6 @@ export function useWalletConnector() {
   return {
     loginMetamask,
     loginWalletConnect,
-    loginBSC,
     logoutWalletConnector,
   };
 }
