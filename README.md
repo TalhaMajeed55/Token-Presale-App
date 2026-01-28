@@ -37,6 +37,7 @@ npm install
 Copy `.env.default` → `.env` and configure:
 
 ```env
+VITE_WALLETCONNECT_PROJECT_ID=your-walletconnect-project-id
 VITE_ALCHEMY_API_KEY=your-key
 VITE_CONTRACT_ADDRESS=0xYourDeployedPresaleAddress
 VITE_TOKEN_ADDRESS=0xYourTokenAddress

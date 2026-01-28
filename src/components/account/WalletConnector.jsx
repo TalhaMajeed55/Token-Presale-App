@@ -1,16 +1,13 @@
-import { useState } from 'react';
-import { useWeb3React, UnsupportedChainIdError } from '@web3-react/core';
+import { useState } from "react";
+import { useWeb3React, UnsupportedChainIdError } from "@web3-react/core";
 import {
   InjectedConnector,
   NoEthereumProviderError,
   UserRejectedRequestError as UserRejectedRequestErrorInjected,
-} from '@web3-react/injected-connector';
-import {
-  UserRejectedRequestError as UserRejectedRequestErrorWalletConnect,
-  WalletConnectConnector,
-} from '@web3-react/walletconnect-connector';
-import { ethers } from 'ethers';
-import Web3 from 'web3';
+} from "@web3-react/injected-connector";
+import { WalletConnectV2Connector } from "./WalletConnectV2Connector";
+import { ethers } from "ethers";
+import Web3 from "web3";
 
 //0 ropsten, 1 bsc
 let netid = 0;
@@ -19,8 +16,8 @@ let walletconnect, injected, bsc;
 
 const ensureConnectorOff = (connector) => {
   if (!connector) return connector;
-  if (typeof connector.off === 'function') return connector;
-  if (typeof connector.removeListener === 'function') {
+  if (typeof connector.off === "function") return connector;
+  if (typeof connector.removeListener === "function") {
     // web3-react core expects connectors to support `.off(...)` (EventEmitter in Node does),
     // but some browser EventEmitter polyfills only implement `removeListener`.
     connector.off = function (event, listener) {
@@ -57,20 +54,20 @@ const ensureConnectorOff = (connector) => {
 const netlist = [
   {
     chaind: 3,
-    rpcurl: 'https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161',
-    blockurl: 'https://ropsten.etherscan.io',
-    chainname: 'Ethereum Mainnet',
-    chainnetname: 'Ethereum Mainnet',
-    chainsymbol: 'ETH',
+    rpcurl: "https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161",
+    blockurl: "https://ropsten.etherscan.io",
+    chainname: "Ethereum Mainnet",
+    chainnetname: "Ethereum Mainnet",
+    chainsymbol: "ETH",
     chaindecimals: 18,
   },
   {
     chaind: 97,
-    rpcurl: 'https://data-seed-prebsc-1-s1.binance.org:8545',
-    blockurl: 'https://testnet.bscscan.com/',
-    chainname: 'BSC testnet',
-    chainnetname: 'BSC testnet',
-    chainsymbol: 'BNB',
+    rpcurl: "https://data-seed-prebsc-1-s1.binance.org:8545",
+    blockurl: "https://testnet.bscscan.com/",
+    chainname: "BSC testnet",
+    chainnetname: "BSC testnet",
+    chainsymbol: "BNB",
     chaindecimals: 18,
   },
 ];
@@ -79,15 +76,15 @@ const defaultethereumconflag = {
   testing: false,
   autoGasMultiplier: 1.5,
   defaultConfirmations: 1,
-  defaultGas: '6000000',
-  defaultGasPrice: '1000000000000',
+  defaultGas: "6000000",
+  defaultGasPrice: "1000000000000",
   nodetimeout: 10000,
 };
 
 function web3ProviderFrom(endpoint, config) {
   const ethConfig = Object.assign(defaultethereumconflag, config || {});
 
-  const providerClass = endpoint.includes('wss')
+  const providerClass = endpoint.includes("wss")
     ? Web3.providers.WebsocketProvider
     : Web3.providers.HttpProvider;
 
@@ -98,7 +95,10 @@ function web3ProviderFrom(endpoint, config) {
 
 export function getDefaultProvider() {
   if (!provider) {
-    provider = new ethers.JsonRpcProvider(netlist[netid].rpcurl, netlist[netid].chaind);
+    provider = new ethers.JsonRpcProvider(
+      netlist[netid].rpcurl,
+      netlist[netid].chaind,
+    );
   }
 
   return provider;
@@ -107,18 +107,21 @@ export function getDefaultProvider() {
 export function setNet(id) {
   netid = id;
 
+  const walletConnectProjectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID;
+
   walletconnect = ensureConnectorOff(
-    new WalletConnectConnector({
-      rpc: { [netlist[netid].chaind]: netlist[netid].rpcurl },
-      qrcode: true,
-      pollingInterval: 12000,
-    })
+    new WalletConnectV2Connector({
+      projectId: walletConnectProjectId,
+      chains: [netlist[netid].chaind],
+      rpcMap: { [netlist[netid].chaind]: netlist[netid].rpcurl },
+      showQrModal: true,
+    }),
   );
 
   injected = ensureConnectorOff(
     new InjectedConnector({
       supportedChainIds: [netlist[netid].chaind],
-    })
+    }),
   );
 
   // legacy / unused, but keep consistent if ever configured
@@ -134,7 +137,7 @@ export function useWalletConnector() {
     if (provider) {
       try {
         await provider.request({
-          method: 'wallet_switchEthereumChain',
+          method: "wallet_switchEthereumChain",
           params: [
             {
               chainId: `0x${netlist[netid].chaind.toString(16)}`,
@@ -145,14 +148,17 @@ export function useWalletConnector() {
         return true;
       } catch (error) {
         const errorCode =
-          error?.code ?? error?.data?.originalError?.code ?? error?.data?.code ?? error?.error?.code;
+          error?.code ??
+          error?.data?.originalError?.code ??
+          error?.data?.code ??
+          error?.error?.code;
 
         // Unrecognized chain ID, try adding it first.
         // MetaMask uses 4902 for "unknown chain".
         if (errorCode === 4902) {
           try {
             await provider.request({
-              method: 'wallet_addEthereumChain',
+              method: "wallet_addEthereumChain",
               params: [
                 {
                   chainId: `0x${netlist[netid].chaind.toString(16)}`,
@@ -169,7 +175,7 @@ export function useWalletConnector() {
             });
 
             await provider.request({
-              method: 'wallet_switchEthereumChain',
+              method: "wallet_switchEthereumChain",
               params: [
                 {
                   chainId: `0x${netlist[netid].chaind.toString(16)}`,
@@ -187,7 +193,7 @@ export function useWalletConnector() {
       }
     } else {
       console.error(
-        "Can't setup the Default Network network on metamask because window.ethereum is undefined"
+        "Can't setup the Default Network network on metamask because window.ethereum is undefined",
       );
       return false;
     }
@@ -195,7 +201,9 @@ export function useWalletConnector() {
 
   const loginWallet = async (connector) => {
     if (!connector) {
-      throw new Error('Unable to find connector! The connector config is wrong');
+      throw new Error(
+        "Unable to find connector! The connector config is wrong",
+      );
     }
 
     // Ensure compatibility with web3-react core's expectation of `.off(...)`.
@@ -206,6 +214,7 @@ export function useWalletConnector() {
       setProvider(safeConnector);
       return true;
     } catch (error) {
+      const message = (error?.message || "").toLowerCase();
       if (error instanceof UnsupportedChainIdError) {
         const hasSetup = await setupNetwork();
         if (hasSetup) {
@@ -217,13 +226,18 @@ export function useWalletConnector() {
       }
 
       if (error instanceof NoEthereumProviderError) {
-        throw new Error('No injected wallet found. Please install MetaMask.');
+        throw new Error("No injected wallet found. Please install MetaMask.");
+      }
+      if (error instanceof UserRejectedRequestErrorInjected) {
+        throw new Error("Connection request rejected.");
       }
       if (
-        error instanceof UserRejectedRequestErrorInjected ||
-        error instanceof UserRejectedRequestErrorWalletConnect
+        message.includes("user rejected") ||
+        message.includes("rejected") ||
+        message.includes("user closed") ||
+        message.includes("modal closed")
       ) {
-        throw new Error('Connection request rejected.');
+        throw new Error("Connection request rejected.");
       }
 
       throw error;

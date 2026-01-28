@@ -8,6 +8,13 @@ import { createTheme, ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { Web3ReactProvider } from '@web3-react/core';
 import { ethers } from 'ethers';
+import { EventEmitter } from 'events';
+
+// WalletConnect v2 depends on an EventEmitter `off()` method (Node has it, but some browser polyfills don't).
+// Patch once, early, so reconnects don't crash with "this.events.off is not a function".
+if (typeof EventEmitter?.prototype?.off !== 'function') {
+  EventEmitter.prototype.off = EventEmitter.prototype.removeListener;
+}
 
 const theme = createTheme({
   palette: {

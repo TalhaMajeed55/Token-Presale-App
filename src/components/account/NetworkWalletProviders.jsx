@@ -92,6 +92,7 @@ const NetworkWalletProviders = ({
   const [connectError, setConnectError] = useState('');
   const [installMenuAnchorEl, setInstallMenuAnchorEl] = useState(null);
   const connectTimeoutRef = useRef(null);
+  const closeOnSuccessRef = useRef(false);
 
   const hasInjectedProvider = () => {
     if (typeof window === 'undefined') return false;
@@ -127,6 +128,7 @@ const NetworkWalletProviders = ({
       setIsConnecting(false);
       setInstallMenuAnchorEl(null);
       clearConnectTimeout();
+      closeOnSuccessRef.current = false;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [walletProvidersDialogOpen]);
@@ -139,12 +141,16 @@ const NetworkWalletProviders = ({
     setIsConnecting(false);
     setInstallMenuAnchorEl(null);
     clearConnectTimeout();
+    closeOnSuccessRef.current = false;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resetNonce]);
 
   useEffect(() => {
     if (account && library) {
-      if (walletProvidersDialogOpen && isConnecting) handleWalletProvidersDialogToggle();
+      if (walletProvidersDialogOpen && closeOnSuccessRef.current) {
+        handleWalletProvidersDialogToggle();
+      }
+      closeOnSuccessRef.current = false;
       setIsConnecting(false);
       setConnectError('');
       clearConnectTimeout();
@@ -174,11 +180,6 @@ const NetworkWalletProviders = ({
     if (selectedWallet === 'injected' && !hasInjectedProvider()) {
       setInstallMenuAnchorEl(event.currentTarget);
       return;
-    }
-
-    if (selectedWallet === 'walletconnect') {
-      // Avoid z-index/backdrop issues with the WalletConnect QR modal.
-      handleWalletProvidersDialogToggle();
     }
 
     const walletprovider = `${selectedWallet}_${selectedNetwork}`;
@@ -217,6 +218,7 @@ const NetworkWalletProviders = ({
       return;
     }
 
+    closeOnSuccessRef.current = true;
     setIsConnecting(true);
     setConnectError('');
     localStorage.setItem('connected', true);
@@ -270,7 +272,11 @@ const NetworkWalletProviders = ({
   return (
     <Dialog
       open={walletProvidersDialogOpen}
-      onClose={handleWalletProvidersDialogToggle}
+      onClose={(event, reason) => {
+        if (isConnecting) return;
+        handleWalletProvidersDialogToggle(event, reason);
+      }}
+      disableEscapeKeyDown={isConnecting}
       aria-labelledby="alert-dialog-title"
       aria-describedby="alert-dialog-description"
       BackdropProps={{
